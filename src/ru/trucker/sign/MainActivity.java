@@ -149,16 +149,28 @@ public class MainActivity extends Activity {
         sigBtns.setOrientation(LinearLayout.HORIZONTAL);
         sigBtns.setPadding(0, Util.dp(this, 10), 0, 0);
         Button loadBtn = smallBtn("Загрузить", Ui.accent());
+        Button drawBtn = smallBtn("✍ Нарисовать", Ui.neutral());
+        sigBtns.addView(loadBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
+        sigBtns.addView(drawBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
+        sigCard.addView(sigBtns);
+
+        LinearLayout sigBtns2 = new LinearLayout(this);
+        sigBtns2.setOrientation(LinearLayout.HORIZONTAL);
+        sigBtns2.setPadding(0, Util.dp(this, 8), 0, 0);
         Button expBtn = smallBtn("Экспорт", Ui.neutral());
         Button impBtn = smallBtn("Импорт", Ui.neutral());
-        sigBtns.addView(loadBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
-        sigBtns.addView(expBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
-        sigBtns.addView(impBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
-        sigCard.addView(sigBtns);
+        sigBtns2.addView(expBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
+        sigBtns2.addView(impBtn, new LinearLayout.LayoutParams(0, Util.dp(this, 44), 1f));
+        sigCard.addView(sigBtns2);
 
         loadBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, SignatureActivity.class));
+            }
+        });
+        drawBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, DrawSignatureActivity.class));
             }
         });
         expBtn.setOnClickListener(new View.OnClickListener() {
@@ -181,6 +193,14 @@ public class MainActivity extends Activity {
         recentBox = new LinearLayout(this);
         recentBox.setOrientation(LinearLayout.VERTICAL);
         root.addView(recentBox);
+
+        TextView footer = new TextView(this);
+        footer.setText("Разработчик: adreno97\nadreno97@mail.ru");
+        footer.setTextSize(12);
+        footer.setTextColor(Ui.sub());
+        footer.setGravity(Gravity.CENTER);
+        footer.setPadding(0, Util.dp(this, 18), 0, Util.dp(this, 4));
+        root.addView(footer);
 
         return sv;
     }
