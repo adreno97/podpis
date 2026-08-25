@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SDK=/home/adreno/android-sdk
+BT=$SDK/build-tools/34.0.0
+PLAT=$SDK/platforms/android-34/android.jar
+PRJ=/home/adreno/podpis
+JAVAC="/home/adreno/Загрузки/gigaide/GigaIDE/jbr/bin/javac"
+KEYTOOL=/usr/lib/jvm/java-23-openjdk-amd64/bin/keytool
+cd "$PRJ"
+
+rm -rf build/gen build/obj build/dex build/stage build/app.unsigned.apk build/app.aligned.apk build/ПодписьPDF.apk
+mkdir -p build/gen build/obj build/dex build/stage
+
+echo "== aapt R.java =="
+"$BT/aapt" package -f -m -J build/gen -M AndroidManifest.xml -S res -I "$PLAT"
+
+echo "== javac =="
+"$JAVAC" --release 8 -classpath "$PLAT:build/gen:libs/pdfbox-android.jar" -d build/obj $(find src -name '*.java')
+echo "ok"
+
+echo "== d8 =="
+/usr/lib/jvm/java-23-openjdk-amd64/bin/java -cp /home/adreno/android-sdk/cmdline-tools/latest/lib/r8.jar com.android.tools.r8.D8 \
+    --release --min-api 21 --lib "$PLAT" --output build/dex $(find build/obj -name '*.class') libs/pdfbox-android.jar 2>/dev/null
+cp build/dex/classes.dex build/stage/classes.dex
+echo "ok"
+
+echo "== aapt package =="
+"$BT/aapt" package -f -M AndroidManifest.xml -S res -A assets -I "$PLAT" -F build/app.unsigned.apk build/stage
+echo "ok"
+
+echo "== zipalign =="
+"$BT/zipalign" -f 4 build/app.unsigned.apk build/app.aligned.apk
+
+echo "== keystore =="
+if [ ! -f key.jks ]; then
+  "$KEYTOOL" -genkeypair -keystore key.jks -alias podpis -keyalg RSA -keysize 2048 \
+      -validity 10000 -storepass trucker123 -keypass trucker123 \
+      -dname "CN=Podpis, OU=Apps, O=Personal, L=RU, C=RU" 2>/dev/null
+fi
+
+echo "== apksigner =="
+"$BT/apksigner" sign --ks key.jks --ks-key-alias podpis \
+    --ks-pass pass:trucker123 --key-pass pass:trucker123 \
+    --out build/ПодписьPDF.apk build/app.aligned.apk
+
+"$BT/apksigner" verify build/ПодписьPDF.apk
+ls -la build/ПодписьPDF.apk
+echo "DONE"

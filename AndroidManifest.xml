@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="ru.trucker.sign"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
+
+    <application
+        android:label="Подпись PDF"
+        android:icon="@drawable/ic_launcher"
+        android:allowBackup="true"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <activity android:name=".MainActivity"
+            android:exported="true"
+            android:label="Подпись PDF"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".SignActivity" android:label="Подпись документа" android:exported="false" />
+        <activity android:name=".SignatureActivity" android:label="Подпись" android:exported="false" />
+
+        <provider
+            android:name=".SigProvider"
+            android:authorities="ru.trucker.sign.files"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>
