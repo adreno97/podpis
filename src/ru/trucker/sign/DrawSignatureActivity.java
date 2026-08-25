@@ -175,13 +175,23 @@ public class DrawSignatureActivity extends Activity {
             int n = s.xs.size();
             if (n == 0) return;
             if (n == 1) {
-                ink.setStrokeWidth(widthFor(s, 0));
+                ink.setStrokeWidth(2.5f * density);
                 canvas.drawPoint(s.xs.get(0), s.ys.get(0), ink);
                 return;
             }
+            float minSeg = density * 0.4f;
+            float w = 0f;
+            boolean first = true;
             for (int i = 0; i < n - 1; i++) {
-                ink.setStrokeWidth(widthFor(s, i));
-                canvas.drawLine(s.xs.get(i), s.ys.get(i), s.xs.get(i + 1), s.ys.get(i + 1), ink);
+                float x1 = s.xs.get(i), y1 = s.ys.get(i);
+                float x2 = s.xs.get(i + 1), y2 = s.ys.get(i + 1);
+                float seg = (float) Math.hypot(x2 - x1, y2 - y1);
+                if (seg < minSeg) continue;
+                float newW = widthFor(s, i);
+                w = first ? newW : (w * 0.6f + newW * 0.4f);
+                first = false;
+                ink.setStrokeWidth(w);
+                canvas.drawLine(x1, y1, x2, y2, ink);
             }
         }
 
@@ -189,11 +199,15 @@ public class DrawSignatureActivity extends Activity {
             int j = Math.min(i + 1, s.xs.size() - 1);
             float dist = (float) Math.hypot(s.xs.get(j) - s.xs.get(i), s.ys.get(j) - s.ys.get(i));
             long dt = Math.max(s.ts.get(j) - s.ts.get(i), 1L);
-            float speed = dist / (float) dt;
-            float baseW = 3.2f * density;
-            float ref = 0.5f;
-            float w = baseW * (ref / (speed + ref * 0.3f));
-            return Math.max(1.2f * density, Math.min(6.5f * density, w));
+            float speed = dist / (float) dt; // px/ms
+            float baseW = 2.9f * density;
+            float maxW = 4.2f * density;
+            float minW = 1.4f * density;
+            float speedRange = 2.0f;
+            float k = speed >= speedRange ? 1f : (speed / speedRange);
+            float w = baseW + (maxW - baseW) * (1f - k);
+            if (w < minW) w = minW;
+            return w;
         }
 
         @Override
