@@ -179,27 +179,66 @@ public class DrawSignatureActivity extends Activity {
                 canvas.drawPoint(s.xs.get(0), s.ys.get(0), ink);
                 return;
             }
-            float minSeg = density * 0.4f;
+            // фильтруем почти совпадающие точки (паузы не дают "клякс")
+            java.util.ArrayList<Integer> idx = new java.util.ArrayList<>();
+            idx.add(0);
+            float minD = 1.2f * density;
+            for (int i = 1; i < n; i++) {
+                int last = idx.get(idx.size() - 1);
+                float d = (float) Math.hypot(s.xs.get(i) - s.xs.get(last), s.ys.get(i) - s.ys.get(last));
+                if (d >= minD) idx.add(i);
+            }
+            int m = idx.size();
+            if (m == 1) {
+                ink.setStrokeWidth(2.5f * density);
+                canvas.drawPoint(s.xs.get(idx.get(0)), s.ys.get(idx.get(0)), ink);
+                return;
+            }
+            // ширина по отфильтрованным сегментам (плавная, с эффектом пера)
+            float[] ws = new float[m - 1];
             float w = 0f;
-            boolean first = true;
-            for (int i = 0; i < n - 1; i++) {
-                float x1 = s.xs.get(i), y1 = s.ys.get(i);
-                float x2 = s.xs.get(i + 1), y2 = s.ys.get(i + 1);
-                float seg = (float) Math.hypot(x2 - x1, y2 - y1);
-                if (seg < minSeg) continue;
-                float newW = widthFor(s, i);
-                w = first ? newW : (w * 0.6f + newW * 0.4f);
-                first = false;
-                ink.setStrokeWidth(w);
-                canvas.drawLine(x1, y1, x2, y2, ink);
+            for (int i = 0; i < m - 1; i++) {
+                int a = idx.get(i);
+                int b = idx.get(i + 1);
+                float dist = (float) Math.hypot(s.xs.get(b) - s.xs.get(a), s.ys.get(b) - s.ys.get(a));
+                long dt = Math.max(s.ts.get(b) - s.ts.get(a), 1L);
+                float newW = widthFor(dist, dt);
+                w = (i == 0) ? newW : (w * 0.6f + newW * 0.4f);
+                ws[i] = w;
+            }
+            // сглаженная кривая: квадратичные Безье через середины отрезков
+            for (int i = 0; i < m - 1; i++) {
+                int a = idx.get(i);
+                int b = idx.get(i + 1);
+                int c = idx.get(Math.max(0, i - 1));
+                float p0x = s.xs.get(a), p0y = s.ys.get(a);
+                float p1x = s.xs.get(b), p1y = s.ys.get(b);
+                float sx = (i == 0) ? p0x : (s.xs.get(c) + p0x) / 2f;
+                float sy = (i == 0) ? p0y : (s.ys.get(c) + p0y) / 2f;
+                float ex = (i == m - 2) ? p1x : (p0x + p1x) / 2f;
+                float ey = (i == m - 2) ? p1y : (p0y + p1y) / 2f;
+                float cx = p0x, cy = p0y;
+                float w0 = (i == 0) ? ws[0] : ws[i - 1];
+                float w1 = ws[i];
+                float len = (float) Math.hypot(ex - sx, ey - sy);
+                int steps = Math.max(8, Math.min(32, (int) (len / (1.5f * density)) + 4));
+                float px = sx, py = sy;
+                for (int k = 1; k <= steps; k++) {
+                    float t = k / (float) steps;
+                    float mt = 1f - t;
+                    float bx = mt * mt * sx + 2f * mt * t * cx + t * t * ex;
+                    float by = mt * mt * sy + 2f * mt * t * cy + t * t * ey;
+                    float bw = w0 + (w1 - w0) * t;
+                    ink.setStrokeWidth(bw);
+                    canvas.drawLine(px, py, bx, by, ink);
+                    px = bx;
+                    py = by;
+                }
             }
         }
 
-        private float widthFor(Stroke s, int i) {
-            int j = Math.min(i + 1, s.xs.size() - 1);
-            float dist = (float) Math.hypot(s.xs.get(j) - s.xs.get(i), s.ys.get(j) - s.ys.get(i));
-            long dt = Math.max(s.ts.get(j) - s.ts.get(i), 1L);
-            float speed = dist / (float) dt; // px/ms
+        private float widthFor(float dist, long dt) {
+            float speed = dist / Math.max(dt, 1L); // px/ms
             float baseW = 2.9f * density;
             float maxW = 4.2f * density;
             float minW = 1.4f * density;
